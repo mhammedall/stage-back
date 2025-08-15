@@ -1,31 +1,28 @@
-﻿// server.js
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
-const db = require('./db'); // Import DB module
+const db = require('./db'); 
 
 const app = express();
-app.use(cors());
+
+app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 app.use('/', routes);
+app.listen(3000, () => console.log("Server running on port 3000"));
 
 const PORT = process.env.PORT || 3000;
-console.log('db module:', db);
-console.log('typeof db.getPool:', typeof db.getPool);
-
 
 (async () => {
   try {
-    // Ensure database and connection pool are ready before starting the server
     await db.getPool();
-    console.log('✅ Database initialized.');
+    console.log('Database initialized.');
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
+      console.log(`Server is running on port ${PORT}`);
     });
   } catch (err) {
-    console.error('❌ Failed to initialize database:', err);
+    console.error('Failed to initialize database:', err);
     process.exit(1);
   }
 })();
