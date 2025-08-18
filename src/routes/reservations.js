@@ -28,10 +28,10 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const pool = await getPool();
     const [rows] = await pool.query(`
-      SELECT r.*, 
-             rooms.name as room_name, 
-             users.username, 
-             users.first_name, 
+      SELECT r.*,
+             rooms.name as room_name,
+             users.username,
+             users.first_name,
              users.last_name
       FROM reservations r
       JOIN rooms ON r.room_id = rooms.id
@@ -42,6 +42,51 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch reservations' });
+  }
+});
+
+router.get('/user', authenticateToken, async (req, res) => {
+  try {
+    console.log('Fetching reservations for user:', req.user.id);
+    const pool = await getPool();
+    const [rows] = await pool.query(`
+      SELECT r.*,
+             rooms.name as room_name
+      FROM reservations r
+      JOIN rooms ON r.room_id = rooms.id
+      WHERE r.user_id = ?
+      ORDER BY r.start_time DESC
+    `, [req.user.id]);
+    console.log('Found reservations:', rows.length, rows);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching user reservations:', err);
+    res.status(500).json({ error: 'Failed to fetch user reservations' });
+  }
+});
+
+router.get('/room/:roomId', authenticateToken, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    console.log('Fetching reservations for room:', roomId);
+
+    const pool = await getPool();
+    const [rows] = await pool.query(`
+      SELECT r.*,
+             users.username,
+             users.first_name,
+             users.last_name
+      FROM reservations r
+      JOIN users ON r.user_id = users.id
+      WHERE r.room_id = ? AND r.status != 'cancelled'
+      ORDER BY r.start_time ASC
+    `, [roomId]);
+
+    console.log('Found room reservations:', rows.length, rows);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching room reservations:', err);
+    res.status(500).json({ error: 'Failed to fetch room reservations' });
   }
 });
 
@@ -128,6 +173,16 @@ router.post('/', authenticateToken, async (req, res) => {
       INSERT INTO reservations (room_id, user_id, start_time, end_time, purpose, status)
       VALUES (?, ?, ?, ?, ?, 'confirmed')
     `, [room_id, req.user.id, start_time, end_time, purpose || '']);
+
+    console.log('Reservation created:', {
+      id: result.insertId,
+      room_id,
+      user_id: req.user.id,
+      start_time,
+      end_time,
+      purpose,
+      status: 'confirmed'
+    });
 
     res.status(201).json({
       id: result.insertId,

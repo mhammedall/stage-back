@@ -5,7 +5,15 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "node src/migrate.js",
+    "seed:users": "node src/seed-users.js",
+    "seed:users:safe": "node src/seed-users-safe.js",
+    "seed:rooms": "node src/seed-rooms.js",
+    "seed:all": "node src/seed-all.js",
+    "setup": "npm run migrate && npm run seed:all",
+    "check:db": "node src/check-db.js",
+    "restore:users": "node src/restore-users.js"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +25,8 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.14.3"
+    "mysql2": "^3.14.3",
+    "nodemailer": "^7.0.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
