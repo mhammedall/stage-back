@@ -4,8 +4,8 @@ const router = express.Router();
 
 const createTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS ||
-      process.env.EMAIL_USER === 'your-email@gmail.com' ||
-      process.env.EMAIL_PASS === 'your-app-password') {
+      process.env.EMAIL_USER === 'email@gmail.com' ||
+      process.env.EMAIL_PASS === 'app-password') {
     throw new Error('Email credentials not configured. Please set EMAIL_USER and EMAIL_PASS in .env file');
   }
 
@@ -23,15 +23,15 @@ router.post('/', async (req, res) => {
     const { name, email, company, subject, message } = req.body;
 
     if (!name || !email || !subject || !message) {
-      return res.status(400).json({ 
-        error: 'Please fill in all required fields (name, email, subject, message)' 
+      return res.status(400).json({
+        error: 'Please fill in all required fields (name, email, subject, message)'
       });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        error: 'Please provide a valid email address' 
+      return res.status(400).json({
+        error: 'Please provide a valid email address'
       });
     }
 
@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER || 'your-email@gmail.com',
-      to: 'mhammedalleguee@gmail.com', 
+      to: 'reservehq911@gmail.com',
       subject: `ReserveHQ Contact Form: ${subject}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
