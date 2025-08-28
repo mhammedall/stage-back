@@ -68,27 +68,22 @@ router.get('/user', authenticateToken, async (req, res) => {
 router.get('/room/:roomId', authenticateToken, async (req, res) => {
   try {
     const { roomId } = req.params;
-    console.log('Fetching reservations for room:', roomId);
-
     const pool = await getPool();
     const [rows] = await pool.query(`
-      SELECT r.*,
-             users.username,
-             users.first_name,
-             users.last_name
+      SELECT r.*, users.username, users.first_name, users.last_name
       FROM reservations r
       JOIN users ON r.user_id = users.id
-      WHERE r.room_id = ? AND r.status != 'cancelled'
+      WHERE r.room_id = ?
       ORDER BY r.start_time ASC
     `, [roomId]);
 
-    console.log('Found room reservations:', rows.length, rows);
     res.json(rows);
   } catch (err) {
-    console.error('Error fetching room reservations:', err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch room reservations' });
   }
 });
+
 
 router.get('/my', authenticateToken, async (req, res) => {
   try {
@@ -107,22 +102,7 @@ router.get('/my', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/room/:roomId', authenticateToken, async (req, res) => {
-  try {
-    const pool = await getPool();
-    const [rows] = await pool.query(`
-      SELECT r.*, users.username, users.first_name, users.last_name
-      FROM reservations r
-      JOIN users ON r.user_id = users.id
-      WHERE r.room_id = ? AND r.status != 'cancelled'
-      ORDER BY r.start_time ASC
-    `, [req.params.roomId]);
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch room reservations' });
-  }
-});
+
 
 router.post('/', authenticateToken, async (req, res) => {
   try {
@@ -171,7 +151,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const [result] = await pool.query(`
       INSERT INTO reservations (room_id, user_id, start_time, end_time, purpose, status)
-      VALUES (?, ?, ?, ?, ?, 'confirmed')
+      VALUES (?, ?, ?, ?, ?, 'pending')
     `, [room_id, req.user.id, start_time, end_time, purpose || '']);
 
     console.log('Reservation created:', {
@@ -191,8 +171,8 @@ router.post('/', authenticateToken, async (req, res) => {
       start_time,
       end_time,
       purpose,
-      status: 'confirmed',
-      message: 'Reservation created successfully'
+      status: 'pending',
+      message: 'Reservation created successfully and is awaiting admin approval'
     });
   } catch (err) {
     console.error(err);

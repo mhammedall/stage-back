@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../db');
 const { verifyToken } = require('../authHelper');
+const multer = require('multer');
+const path = require('path');
+
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -26,6 +29,18 @@ function adminOnly(req, res, next) {
   }
   next();
 }
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); 
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
+
 
 router.get('/', async (req, res) => {
   try {
@@ -58,9 +73,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, adminOnly, async (req, res) => {
+
+router.post('/', authenticateToken, adminOnly, upload.single('image'), async (req, res) => {
   try {
-    const { name, capacity, floor, room_type, location, amenities, image } = req.body;
+    const { name, capacity, floor, room_type, location, amenities } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : '';
+
     if (!name || !capacity || !floor) {
       return res.status(400).json({ error: 'Name, capacity, and floor are required' });
     }
@@ -79,7 +97,7 @@ router.post('/', authenticateToken, adminOnly, async (req, res) => {
 
     const [result] = await pool.query(
       'INSERT INTO rooms (name, capacity, floor, room_type, location, amenities, image, availability) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, capacity, floor, room_type || 'meeting', location || '', amenities || '', image || '', true]
+      [name, capacity, floor, room_type || 'meeting', location || '', amenities || '', image, true]
     );
 
     res.status(201).json({
@@ -100,18 +118,25 @@ router.post('/', authenticateToken, adminOnly, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateToken, adminOnly, async (req, res) => {
+router.put('/:id', authenticateToken, adminOnly, upload.single('image'), async (req, res) => {
   try {
-    const { name, capacity, floor, room_type, availability, location, amenities, image } = req.body;
+    const { name, capacity, floor, room_type, availability, location, amenities } = req.body;
+
     const pool = await getPool();
 
-    const [existing] = await pool.query('SELECT id FROM rooms WHERE id = ?', [req.params.id]);
+
+    const [existing] = await pool.query('SELECT * FROM rooms WHERE id = ?', [req.params.id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Room not found' });
     }
 
+    const image = req.file ? `/uploads/${req.file.filename}` : existing[0].image;
+
     if (name) {
-      const [nameCheck] = await pool.query('SELECT id FROM rooms WHERE name = ? AND id != ?', [name, req.params.id]);
+      const [nameCheck] = await pool.query(
+        'SELECT id FROM rooms WHERE name = ? AND id != ?',
+        [name, req.params.id]
+      );
       if (nameCheck.length > 0) {
         return res.status(409).json({ error: 'Room name already exists' });
       }
@@ -124,7 +149,7 @@ router.put('/:id', authenticateToken, adminOnly, async (req, res) => {
       }
     }
 
-    const [result] = await pool.query(
+    await pool.query(
       'UPDATE rooms SET name = ?, capacity = ?, floor = ?, room_type = ?, availability = ?, location = ?, amenities = ?, image = ? WHERE id = ?',
       [name, capacity, floor, room_type, availability, location, amenities, image, req.params.id]
     );
@@ -135,6 +160,7 @@ router.put('/:id', authenticateToken, adminOnly, async (req, res) => {
     res.status(500).json({ error: 'Failed to update room' });
   }
 });
+
 
 router.delete('/:id', authenticateToken, adminOnly, async (req, res) => {
   try {
