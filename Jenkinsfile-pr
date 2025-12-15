@@ -2,7 +2,11 @@ pipeline {
     agent any
 
     triggers {
-        githubPullRequests()
+        githubPullRequests(
+            adminlist: '',
+            allowMembersOfWhitelistedOrgsAsAdmins: true,
+            orgsList: ['mhammedall']
+        )
     }
 
     stages {
