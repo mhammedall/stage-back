@@ -1,19 +1,39 @@
 pipeline {
-  agent any
-
-  stages {
-    stage('Checkout') { steps { checkout scm } }
-
-    stage('Setup') { steps { sh 'node -v && npm -v' } }
-
-    stage('Build') { steps { sh 'docker build -t express-dev .' } }
-
-    stage('Run (Docker)') { steps { sh 'docker run -d -p 3001:3000 --name dev-test express-dev' } }
-
-    stage('Smoke Test') { steps { sh 'curl http://localhost:3001/' } }
-
-    stage('Archive Artifacts') { steps { archiveArtifacts artifacts: '**/*.log' } }
-
-    stage('Cleanup') { steps { sh 'docker rm -f dev-test || true' } }
-  }
+    agent any
+    triggers {
+        pollSCM('H/5 * * * *') // vérifie les pushes toutes les 5 min
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Build') {
+            steps {
+                bat 'echo Building dev branch...'
+                bat 'msbuild MySolution.sln /p:Configuration=Release'
+            }
+        }
+        stage('Unit Tests') {
+            steps {
+                bat 'echo Running unit tests...'
+                bat 'powershell -File run-tests.ps1'
+            }
+        }
+        stage('Package') {
+            steps {
+                bat 'echo Packaging artifacts...'
+                bat 'powershell -File package.ps1'
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Dev build succeeded'
+        }
+        failure {
+            echo 'Dev build failed'
+        }
+    }
 }

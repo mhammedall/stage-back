@@ -1,30 +1,38 @@
 pipeline {
-  agent any
-
-  stages {
-    stage('Checkout') { steps { checkout scm } }
-
-    stage('Setup') {
-      steps {
-        script {
-          VERSION = sh(script: "git describe --tags", returnStdout: true).trim()
+    agent any
+    triggers {
+        pollSCM('H/5 * * * *') // ou GitHub hook pour tag push
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
         }
-      }
+        stage('Build') {
+            when {
+                expression { env.GIT_TAG_NAME != null }
+            }
+            steps {
+                bat "echo Building tag ${env.GIT_TAG_NAME}..."
+                bat 'msbuild MySolution.sln /p:Configuration=Release'
+            }
+        }
+        stage('Package') {
+            when {
+                expression { env.GIT_TAG_NAME != null }
+            }
+            steps {
+                bat 'powershell -File package-release.ps1'
+            }
+        }
     }
-
-    stage('Build') { steps { sh "docker build -t express:${VERSION} ." } }
-
-    stage('Run (Docker)') { steps { sh "docker run -d -p 3002:3000 --name release-test express:${VERSION}" } }
-
-    stage('Smoke Test') { steps { sh 'curl http://localhost:3002/' } }
-
-    stage('Archive Artifacts') {
-      steps {
-        sh "docker save express:${VERSION} > express-${VERSION}.tar"
-        archiveArtifacts artifacts: "express-${VERSION}.tar"
-      }
+    post {
+        success {
+            echo 'Tag build succeeded'
+        }
+        failure {
+            echo 'Tag build failed'
+        }
     }
-
-    stage('Cleanup') { steps { sh 'docker rm -f release-test || true' } }
-  }
 }
