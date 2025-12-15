@@ -1,39 +1,66 @@
 pipeline {
     agent any
+
     triggers {
-        pollSCM('H/5 * * * *') // vérifie les pushes toutes les 5 min
+        githubPush()
     }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+
+        stage('Setup') {
+            parallel {
+                stage('Node 18') {
+                    steps {
+                        bat 'node -v'
+                        bat 'npm install'
+                    }
+                }
+                stage('Node 20') {
+                    steps {
+                        bat 'node -v'
+                        bat 'npm install'
+                    }
+                }
+            }
+        }
+
         stage('Build') {
             steps {
-                bat 'echo Building dev branch...'
-                bat 'msbuild MySolution.sln /p:Configuration=Release'
+                bat 'npm run build'
             }
         }
-        stage('Unit Tests') {
+
+        stage('Run (Docker)') {
             steps {
-                bat 'echo Running unit tests...'
-                bat 'powershell -File run-tests.ps1'
+                bat 'docker build -t app-dev .'
+                bat 'docker run -d -p 3001:3000 --name app-dev app-dev'
             }
         }
-        stage('Package') {
+
+        stage('Smoke Test') {
             steps {
-                bat 'echo Packaging artifacts...'
-                bat 'powershell -File package.ps1'
+                bat 'powershell -ExecutionPolicy Bypass -File smoke-test.ps1'
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: '*/dist/*, */.log', fingerprint: true
             }
         }
     }
+
     post {
-        success {
-            echo 'Dev build succeeded'
-        }
-        failure {
-            echo 'Dev build failed'
+        always {
+            bat 'docker stop app-dev || exit 0'
+            bat 'docker rm app-dev || exit 0'
         }
     }
+
 }
