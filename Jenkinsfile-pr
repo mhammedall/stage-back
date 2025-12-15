@@ -1,0 +1,20 @@
+pipeline {
+    
+  agent any
+
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+
+    stage('Setup') { steps { sh 'chmod +x smoke-test.sh' } }
+
+    stage('Build') { steps { sh 'docker build -t express-pr .' } }
+
+    stage('Run (Docker)') { steps { sh 'docker run -d -p 3000:3000 --name pr-test express-pr' } }
+
+    stage('Smoke Test') { steps { sh './smoke-test.sh' } }
+
+    stage('Archive Artifacts') { steps { archiveArtifacts artifacts: '**/*.log' } }
+
+    stage('Cleanup') { steps { sh 'docker rm -f pr-test || true' } }
+  }
+}
