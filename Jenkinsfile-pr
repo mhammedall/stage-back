@@ -1,32 +1,63 @@
 pipeline {
+    
     agent any
+
     triggers {
-        githubPullRequests() // <-- corriger ici
+        githubPullRequest()
     }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+
+        stage('Setup') {
+            steps {
+                bat 'node -v'
+                bat 'npm install'
+            }
+        }
+
         stage('Build') {
             steps {
-                bat 'echo Building PR...'
-                bat 'msbuild MySolution.sln /p:Configuration=Debug'
+                bat 'npm run build'
             }
         }
-        stage('Smoke Tests') {
+
+        stage('Run (Docker)') {
             steps {
-                powershell 'C:\\jenkins\\scripts\\smoke-test.ps1'
+                bat 'docker build -t app-pr .'
+                bat 'docker run -d -p 3000:3000 --name app-pr app-pr'
+            }
+        }
+
+        stage('Smoke Test') {
+            steps {
+                bat 'powershell -ExecutionPolicy Bypass -File smoke-test.ps1'
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: '*/.log', fingerprint: true
             }
         }
     }
+
     post {
-        success {
-            echo 'PR build succeeded'
+        always {
+            bat 'docker stop app-pr || exit 0'
+            bat 'docker rm app-pr || exit 0'
         }
         failure {
-            echo 'PR build failed'
+            echo '❌ Pipeline PR FAILED'
+        }
+        success {
+            echo '✅ Pipeline PR PASSED'
         }
     }
+
 }
