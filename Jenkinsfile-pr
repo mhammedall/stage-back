@@ -1,12 +1,7 @@
 pipeline {
     agent any
     triggers {
-<<<<<<< main
-        // Scan PRs automatically via GitHub hook
-        githubPullRequest()
-=======
         githubPullRequests() // <-- corriger ici
->>>>>>> local
     }
     stages {
         stage('Checkout') {
@@ -22,12 +17,7 @@ pipeline {
         }
         stage('Smoke Tests') {
             steps {
-<<<<<<< main
-                bat 'echo Running smoke tests...'
-                bat 'powershell -File smoke-test.ps1'
-=======
                 powershell 'C:\\jenkins\\scripts\\smoke-test.ps1'
->>>>>>> local
             }
         }
     }
