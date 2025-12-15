@@ -1,13 +1,11 @@
 pipeline {
-    
     agent any
 
     triggers {
-        githubPullRequest()
+        githubPullRequests()
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -59,5 +57,4 @@ pipeline {
             echo '✅ Pipeline PR PASSED'
         }
     }
-
 }
