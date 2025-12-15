@@ -1,38 +1,61 @@
 pipeline {
     agent any
-    triggers {
-        pollSCM('H/5 * * * *') // ou GitHub hook pour tag push
+
+    when {
+        tag pattern: "v*", comparator: "GLOB"
     }
+
+    environment {
+        VERSION = "${env.GIT_TAG_NAME}"
+    }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        stage('Build') {
-            when {
-                expression { env.GIT_TAG_NAME != null }
-            }
+
+        stage('Setup') {
             steps {
-                bat "echo Building tag ${env.GIT_TAG_NAME}..."
-                bat 'msbuild MySolution.sln /p:Configuration=Release'
+                bat 'npm install'
             }
         }
-        stage('Package') {
-            when {
-                expression { env.GIT_TAG_NAME != null }
-            }
+
+        stage('Build') {
             steps {
-                bat 'powershell -File package-release.ps1'
+                bat "npm run build"
+            }
+        }
+
+        stage('Run (Docker)') {
+            steps {
+                bat "docker build -t app:${VERSION} ."
+                bat "docker run -d --name app-release app:${VERSION}"
+            }
+        }
+
+        stage('Smoke Test') {
+            steps {
+                bat 'powershell -ExecutionPolicy Bypass -File smoke-test.ps1'
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: '*/dist/*, */.log', fingerprint: true
             }
         }
     }
+
     post {
-        success {
-            echo 'Tag build succeeded'
+        always {
+            bat 'docker stop app-release || exit 0'
+            bat 'docker rm app-release || exit 0'
         }
-        failure {
-            echo 'Tag build failed'
+        success {
+            echo "🚀 Release ${VERSION} DONE"
         }
     }
 }
