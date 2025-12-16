@@ -3,7 +3,7 @@ param (
   [string]$PORT
 )
 
-$url = "http://localhost:$PORT/health"
+$url = "http://localhost:$PORT/"
 $maxAttempts = 10
 $delay = 3
 
