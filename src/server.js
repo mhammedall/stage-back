@@ -13,8 +13,6 @@ app.use('/', routes);
 
 (async () => {
   try {
-    await db.getPool();
-    console.log('Database initialized.');
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
