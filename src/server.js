@@ -11,30 +11,18 @@ app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 app.use('/', routes);
 
-// 🚨 CI / Smoke test mode
-if (process.env.REQUIRE_DB === 'false') {
-  console.log('DB skipped (CI / smoke test mode)');
+(async () => {
+  try {
+    await db.getPool();
+    console.log('Database initialized.');
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running (NO DB) on port ${PORT}`);
-  });
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
 
-} else {
-  // 🟢 Production / normal mode
-  (async () => {
-    try {
-      await db.getPool();
-      console.log('Database initialized.');
-
-      app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
-      });
-
-    } catch (err) {
-      console.error('Failed to initialize database:', err);
-      process.exit(1);
-    }
-  })();
-}
-
+  } catch (err) {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  }
+})();
 console.log("PR smoke test");
