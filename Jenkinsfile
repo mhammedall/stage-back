@@ -48,7 +48,7 @@ pipeline {
     stage('Smoke Test') {
       steps {
         powershell '''
-          Start-Sleep -Seconds 5
+          Start-Sleep -Seconds 10
           .\\scripts\\smoke.ps1 $env:APP_PORT
         '''
       }
