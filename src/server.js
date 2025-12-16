@@ -6,17 +6,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const REQUIRE_DB = process.env.REQUIRE_DB !== 'false';
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors());
 app.use(express.json());
 
-// routes APRÈS init
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 const routes = require('./routes');
 app.use('/', routes);
 
 (async () => {
   try {
     if (REQUIRE_DB) {
-      const db = require('./db');   // ⬅️ IMPORT LA DB SEULEMENT ICI
+      const db = require('./db'); // ⬅️ import ici seulement
       await db.getPool();
       console.log('Database initialized');
     } else {
@@ -32,3 +35,4 @@ app.use('/', routes);
     process.exit(1);
   }
 })();
+// ⬅️ import ici seulement
